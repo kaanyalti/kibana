@@ -122,9 +122,7 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
   }
 
   const CustomFieldsTable = () => {
-    const [globalDataTags, setGlobalDataTags] = useState<GlobalDataTag[]>([
-      { name: '', value: '' },
-    ]);
+    const [globalDataTags, setGlobalDataTags] = useState<GlobalDataTag[]>([]);
     const [draft, setDraft] = useState<GlobalDataTag>({ name: '', value: '' });
 
     const actions: Array<DefaultItemAction<GlobalDataTag>> = [
@@ -204,7 +202,12 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
 
     if (globalDataTags.length === 0) {
       return (
-        <EuiButton color="primary" onClick={() => { }}>
+        <EuiButton
+          color="primary"
+          onClick={() => {
+            setGlobalDataTags([...globalDataTags, { name: '', value: '' }]);
+          }}
+        >
           Add Field
         </EuiButton>
       );
