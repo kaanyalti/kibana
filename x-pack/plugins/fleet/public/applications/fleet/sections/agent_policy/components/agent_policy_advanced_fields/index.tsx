@@ -6,6 +6,8 @@
  */
 
 import React, { useState, useMemo, Suspense } from 'react';
+import type { DefaultItemAction, EuiBasicTableColumn } from '@elastic/eui';
+import { EuiBasicTable } from '@elastic/eui';
 import {
   EuiDescribedFormGroup,
   EuiFormRow,
@@ -25,6 +27,7 @@ import {
   EuiBetaBadge,
   EuiBadge,
   EuiSwitch,
+  EuiButton,
 } from '@elastic/eui';
 import { FormattedMessage } from '@kbn/i18n-react';
 import { i18n } from '@kbn/i18n';
@@ -112,6 +115,112 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
   const licenseService = useLicense();
   const [isUninstallCommandFlyoutOpen, setIsUninstallCommandFlyoutOpen] = useState(false);
   const policyHasElasticDefend = useMemo(() => hasElasticDefend(agentPolicy), [agentPolicy]);
+
+  interface GlobalDataTag {
+    name: string;
+    value: string | number;
+  }
+
+  const CustomFieldsTable = () => {
+    const [globalDataTags, setGlobalDataTags] = useState<GlobalDataTag[]>([
+      { name: '', value: '' },
+    ]);
+    const [draft, setDraft] = useState<GlobalDataTag>({ name: '', value: '' });
+
+    const actions: Array<DefaultItemAction<GlobalDataTag>> = [
+      {
+        name: 'Confirm',
+        description: 'Confirm custom field',
+        icon: 'check',
+        type: 'icon',
+        onClick: () => {
+          setGlobalDataTags([...globalDataTags, draft]);
+          setDraft({ name: '', value: '' });
+        },
+      },
+      {
+        name: 'Cancel',
+        description: 'Cancel custom field',
+        icon: 'error',
+        type: 'icon',
+        onClick: (e) => {
+          setGlobalDataTags(globalDataTags.filter((tag) => tag.name !== e.name));
+        },
+      },
+    ];
+    const columns: Array<EuiBasicTableColumn<GlobalDataTag>> = [
+      {
+        field: 'name',
+        name: 'Field',
+        truncateText: false,
+        render: (name: GlobalDataTag['name'], item) => {
+          return (
+            <>
+              <EuiFieldText
+                value={name ? name : draft.name}
+                onChange={(e) => {
+                  // console.log('===================');
+                  // console.log(`Value: ${name}`);
+                  // console.log('-------------------');
+                  // console.log(`Item: ${JSON.stringify(item)}`);
+                  // console.log('-------------------');
+                  // console.log(`Draft Name: ${draft.name}\nDraft Value: ${draft.value}`);
+                  // console.log('===================');
+                  setDraft({ ...draft, name: e.target.value });
+                }}
+                placeholder="Enter field name"
+              />
+            </>
+          );
+        },
+      },
+      {
+        field: 'value',
+        name: 'Value',
+        truncateText: false,
+        render: (value: GlobalDataTag['value'], item) => {
+          return (
+            <>
+              <EuiFieldText
+                value={value ? value : draft.value}
+                onChange={(e) => {
+                  // console.log('%%%%%%%%%%%%%%%%%%%%%%%');
+                  // console.log(`Value: ${value}`);
+                  // console.log('-------------------');
+                  // console.log(`Item: ${JSON.stringify(item)}`);
+                  // console.log('-------------------');
+                  // console.log(`Draft Name: ${draft.name}\nDraft Value: ${draft.value}`);
+                  // console.log('%%%%%%%%%%%%%%%%%%%%%%%');
+                  setDraft({ ...draft, value: e.target.value });
+                }}
+                placeholder="Enter field name"
+              />
+            </>
+          );
+        },
+      },
+      { name: 'Actions', actions },
+    ];
+
+    if (globalDataTags.length === 0) {
+      return (
+        <EuiButton color="primary" onClick={() => { }}>
+          Add Field
+        </EuiButton>
+      );
+    } else {
+      return (
+        <>
+          <EuiBasicTable
+            items={globalDataTags}
+            itemId="name"
+            columns={columns}
+            onChange={() => { }}
+          />
+        </>
+      );
+    }
+  };
 
   const AgentTamperProtectionSectionContent = useMemo(
     () => (
@@ -212,14 +321,14 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
           <h3>
             <FormattedMessage
               id="xpack.fleet.agentPolicyForm.descriptionFieldLabel"
-              defaultMessage="Description"
+              defaultMessage="DESCIRPTIONS"
             />
           </h3>
         }
         description={
           <FormattedMessage
             id="xpack.fleet.agentPolicyForm.descriptionDescription"
-            defaultMessage="Add a description of how this policy will be used."
+            defaultMessage="THIS IS BEING CHANGED"
           />
         }
       >
@@ -303,6 +412,27 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
           />
         </EuiFormRow>
       </EuiDescribedFormGroup>
+
+      {/* TODO: This is going to be the form */}
+      <EuiDescribedFormGroup
+        title={
+          <h3>
+            <FormattedMessage
+              id="xpack.fleet.agentPolicyForm.globalDataTags"
+              defaultMessage="Custom Fields"
+            />
+          </h3>
+        }
+        description={
+          <FormattedMessage
+            id="xpack.fleet.agentPolicyForm.customFieldsDescription"
+            defaultMessage="Add a field and value set to all data collected from the agents enrolled in this policy."
+          />
+        }
+      >
+        {CustomFieldsTable()}
+      </EuiDescribedFormGroup>
+
       <EuiDescribedFormGroup
         title={
           <h3>
