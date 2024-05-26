@@ -124,6 +124,9 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
   const CustomFieldsTable = () => {
     const [globalDataTags, setGlobalDataTags] = useState<GlobalDataTag[]>([]);
     const [draft, setDraft] = useState<GlobalDataTag>({ name: '', value: '' });
+    const [addedTags, setAddedTags] = useState<Set<string>>(new Set(['']));
+    const [isValidName, setIsValidName] = useState<boolean>(true);
+    const [isValidValue, setIsValidValue] = useState<boolean>(true);
 
     const actions: Array<DefaultItemAction<GlobalDataTag>> = [
       {
@@ -132,8 +135,44 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         icon: 'check',
         type: 'icon',
         onClick: () => {
-          setGlobalDataTags([...globalDataTags, draft]);
-          setDraft({ name: '', value: '' });
+          // TODO: add a separate check for empty name, so that we can print
+          // that empty name is not allowed. We are currently already not
+          // allowing empty string because of deduplication, but we need to
+          // print the correct error message
+          let validName = true;
+          let validValue = true;
+
+          if (addedTags.has(draft.name)) {
+            validName = false;
+          }
+
+          if (draft.value === '') {
+            validValue = false;
+          }
+
+          if (validName && validValue) {
+            setIsValidName(true);
+            setIsValidValue(true);
+            const newAddedTags = new Set(addedTags);
+            newAddedTags.add(draft.name);
+            setAddedTags(newAddedTags);
+            globalDataTags.pop();
+            setGlobalDataTags([...globalDataTags, draft]);
+            setDraft({ name: '', value: '' });
+            return;
+          }
+
+          if (!validName) {
+            setIsValidName(validName);
+          } else {
+            setIsValidName(true);
+          }
+
+          if (!validValue) {
+            setIsValidValue(validValue);
+          } else {
+            setIsValidValue(true);
+          }
         },
       },
       {
@@ -142,30 +181,30 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         icon: 'error',
         type: 'icon',
         onClick: (e) => {
+          setIsValidName(true);
           setGlobalDataTags(globalDataTags.filter((tag) => tag.name !== e.name));
         },
       },
     ];
+
     const columns: Array<EuiBasicTableColumn<GlobalDataTag>> = [
       {
         field: 'name',
         name: 'Field',
         truncateText: false,
         render: (name: GlobalDataTag['name'], item) => {
+          console.log('%%%%%%%%%%%%%%%%%%%%%%%%');
+          console.log(name);
+          console.log(item);
+          console.log('%%%%%%%%%%%%%%%%%%%%%%%%');
           return (
             <>
               <EuiFieldText
                 value={name ? name : draft.name}
                 onChange={(e) => {
-                  // console.log('===================');
-                  // console.log(`Value: ${name}`);
-                  // console.log('-------------------');
-                  // console.log(`Item: ${JSON.stringify(item)}`);
-                  // console.log('-------------------');
-                  // console.log(`Draft Name: ${draft.name}\nDraft Value: ${draft.value}`);
-                  // console.log('===================');
                   setDraft({ ...draft, name: e.target.value });
                 }}
+                isInvalid={!isValidName && name === ''}
                 placeholder="Enter field name"
               />
             </>
@@ -177,20 +216,18 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         name: 'Value',
         truncateText: false,
         render: (value: GlobalDataTag['value'], item) => {
+          console.log('========================');
+          console.log(value);
+          console.log(item);
+          console.log('========================');
           return (
             <>
               <EuiFieldText
                 value={value ? value : draft.value}
                 onChange={(e) => {
-                  // console.log('%%%%%%%%%%%%%%%%%%%%%%%');
-                  // console.log(`Value: ${value}`);
-                  // console.log('-------------------');
-                  // console.log(`Item: ${JSON.stringify(item)}`);
-                  // console.log('-------------------');
-                  // console.log(`Draft Name: ${draft.name}\nDraft Value: ${draft.value}`);
-                  // console.log('%%%%%%%%%%%%%%%%%%%%%%%');
                   setDraft({ ...draft, value: e.target.value });
                 }}
+                isInvalid={!isValidValue && item.name === ''}
                 placeholder="Enter field name"
               />
             </>
@@ -220,6 +257,14 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
             columns={columns}
             onChange={() => { }}
           />
+          <EuiButton
+            color="primary"
+            onClick={() => {
+              setGlobalDataTags([...globalDataTags, { name: '', value: '' }]);
+            }}
+          >
+            Add Field
+          </EuiButton>
         </>
       );
     }
