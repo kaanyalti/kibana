@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo, Suspense } from 'react';
-import type { DefaultItemAction, EuiBasicTableColumn } from '@elastic/eui';
+import type { DefaultItemAction, EuiBasicTableColumn, CustomItemAction } from '@elastic/eui';
 import { EuiBasicTable } from '@elastic/eui';
 import {
   EuiDescribedFormGroup,
@@ -28,6 +28,7 @@ import {
   EuiBadge,
   EuiSwitch,
   EuiButton,
+  EuiIcon,
 } from '@elastic/eui';
 import { FormattedMessage } from '@kbn/i18n-react';
 import { i18n } from '@kbn/i18n';
@@ -127,6 +128,96 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
     const [addedTags, setAddedTags] = useState<Set<string>>(new Set(['']));
     const [isValidName, setIsValidName] = useState<boolean>(true);
     const [isValidValue, setIsValidValue] = useState<boolean>(true);
+    const [isEditing, setIsEditing] = useState<boolean>(true);
+
+    const customActions: Array<CustomItemAction<GlobalDataTag>> = [
+      {
+        render: (tag: GlobalDataTag) => {
+          if (isEditing) {
+            return (
+              <EuiLink
+                onClick={() => {
+                  // TODO: add a separate check for empty name, so that we can print
+                  // that empty name is not allowed. We are currently already not
+                  // allowing empty string because of deduplication, but we need to
+                  // print the correct error message
+                  let validName = true;
+                  let validValue = true;
+
+                  if (addedTags.has(draft.name)) {
+                    validName = false;
+                  }
+
+                  if (draft.value === '') {
+                    validValue = false;
+                  }
+
+                  if (validName && validValue) {
+                    setIsValidName(true);
+                    setIsValidValue(true);
+                    const newAddedTags = new Set(addedTags);
+                    newAddedTags.add(draft.name);
+                    setAddedTags(newAddedTags);
+                    globalDataTags.pop();
+                    setGlobalDataTags([...globalDataTags, draft]);
+                    setDraft({ name: '', value: '' });
+                    setIsEditing(false);
+                    return;
+                  }
+
+                  if (!validName) {
+                    setIsValidName(validName);
+                  } else {
+                    setIsValidName(true);
+                  }
+
+                  if (!validValue) {
+                    setIsValidValue(validValue);
+                  } else {
+                    setIsValidValue(true);
+                  }
+                }}
+              >
+                <EuiIcon type="checkInCircleFilled" /> Confirm
+              </EuiLink>
+            );
+          } else {
+            return <EuiIcon type="pencil" onClick={() => setIsEditing(true)} />;
+          }
+        },
+      },
+      {
+        render: (tag: GlobalDataTag) => {
+          if (isEditing) {
+            return (
+              <EuiLink
+                color="danger"
+                onClick={() => {
+                  if (tag.name === '' && tag.value === '') {
+                    setIsValidName(true);
+                    setGlobalDataTags(globalDataTags.filter((t) => t.name !== tag.name));
+                    setDraft({ name: '', value: '' });
+                    return;
+                  }
+                  setIsEditing(false);
+                }}
+              >
+                <EuiIcon type="errorFilled" /> Cancel
+              </EuiLink>
+            );
+          } else {
+            return (
+              <EuiIcon
+                type="trash"
+                onClick={() => {
+                  setGlobalDataTags(globalDataTags.filter((t) => t.name !== tag.name));
+                }}
+              />
+            );
+          }
+        },
+      },
+    ];
 
     const actions: Array<DefaultItemAction<GlobalDataTag>> = [
       {
@@ -134,6 +225,7 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         description: 'Confirm custom field',
         icon: 'check',
         type: 'icon',
+        enabled: () => isEditing,
         onClick: () => {
           // TODO: add a separate check for empty name, so that we can print
           // that empty name is not allowed. We are currently already not
@@ -159,6 +251,7 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
             globalDataTags.pop();
             setGlobalDataTags([...globalDataTags, draft]);
             setDraft({ name: '', value: '' });
+            setIsEditing(false);
             return;
           }
 
@@ -180,6 +273,7 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         description: 'Cancel custom field',
         icon: 'error',
         type: 'icon',
+        enabled: () => isEditing,
         onClick: (e) => {
           setIsValidName(true);
           setGlobalDataTags(globalDataTags.filter((tag) => tag.name !== e.name));
@@ -193,10 +287,6 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         name: 'Field',
         truncateText: false,
         render: (name: GlobalDataTag['name'], item) => {
-          console.log('%%%%%%%%%%%%%%%%%%%%%%%%');
-          console.log(name);
-          console.log(item);
-          console.log('%%%%%%%%%%%%%%%%%%%%%%%%');
           return (
             <>
               <EuiFieldText
@@ -216,10 +306,6 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
         name: 'Value',
         truncateText: false,
         render: (value: GlobalDataTag['value'], item) => {
-          console.log('========================');
-          console.log(value);
-          console.log(item);
-          console.log('========================');
           return (
             <>
               <EuiFieldText
@@ -234,7 +320,8 @@ export const AgentPolicyAdvancedOptionsContent: React.FunctionComponent<Props> =
           );
         },
       },
-      { name: 'Actions', actions },
+      // { name: 'Actions', actions },
+      { name: 'Actions', actions: customActions },
     ];
 
     if (globalDataTags.length === 0) {
